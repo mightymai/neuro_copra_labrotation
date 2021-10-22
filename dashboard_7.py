@@ -50,29 +50,30 @@ app.config.suppress_callback_exceptions = True
 #def serve_layout():
 session_id = str(uuid.uuid4())
 layout = html.Div(children=[
-        html.Div(session_id, id='session-id', style={'display': 'none'}),
+    html.Div(session_id, id='session-id', style={'display': 'none'}),
         html.Div(id='filecache_marker', style={'display': 'none'}),
-        dcc.Upload(
+        dbc.Row([dbc.Col([html.Div(id='filename_input', style={'margin': '10px', 'lineHeight': '40px', 'size':5})]),
+        dbc.Col([dcc.Upload(
         id='upload-data',
         children=html.Div([
             'Drag and Drop or ',
             html.A('Select File')
         ]),
         style={
-            'width': '100%',
+            'width': '90%',
             'height': '55px',
-            'lineHeight': '60px',
-            'borderWidth': '1px',
+            'lineHeight': '50px',
+            'borderWidth': '1.5px',
             'borderStyle': 'dashed',
             'borderRadius': '5px',
             'textAlign': 'center',
-            'margin': 'auto'
+            'verticalAlign' : 'baseline',
+            'margin': '5px'
         },
         # Allow multiple files to be uploaded
         multiple=False
-        ),
-        html.Div(id='filename_input', style={'margin': '10px'}),
-        html.Button('Add Chart', id='add-chart', n_clicks=0, className='add-chart button1', style={'display':'block'}),
+        )]),
+        dbc.Col([html.Button('Add Chart', id='add-chart', n_clicks=0, className='add-chart button1', style={'display':'block', 'float':'right', 'margin-right':'5px'})])]),
         dbc.Row(className='bigdiv', id='dropdown-menus', children=[])
 ])
     #return layout
@@ -146,7 +147,7 @@ def update_options(filecache_marker, timestamp, session_id, filename, n_clicks, 
 
     if n_clicks and filename is None:
         message = 'Please upload a file first'
-        return [], message, style
+        return [], html.B(message), style
 
     elif 'index' in input_id:
         print('input_id', input_id)
@@ -190,8 +191,8 @@ def update_options(filecache_marker, timestamp, session_id, filename, n_clicks, 
                 'width':'100%',
                 #"display": "inline-block",
                 "outline": "thin lightgrey solid",
-                "padding": '2%',
-                'margin' : 0
+                "padding": '2px',
+                #'margin' : 0
             }
             new_child = dbc.Col(className="dynamic-div",
             children=[html.Div([html.Button(
@@ -303,16 +304,23 @@ def build_plot(patient, category, identifier, filecache_marker, timestamp, sessi
                             )
                         )
 
-            fig = go.Figure(data = scatter_data, layout=go.Layout(margin=dict(b=0)))
-            fig.update_layout(transition_duration=500)
+            fig = go.Figure(data = scatter_data)
+            fig.update_layout(transition_duration=500, 
+                              margin=dict(l=20, r=5, t=20, b=0), 
+                             legend=dict(
+                                        yanchor="top",
+                                        y=-0.4,
+                                        xanchor="left",
+                                        x=0.01
+                                    ))
 
             num_children = len(children)# since we are about to add a child
-            width_val = int(1/num_children * 100) - 4*num_children
+            width_val = int(1/num_children * 100) - 2
             print(width_val, 'graph')
 
             style={
-                #"width": '{}vw'.format(width_val),
-                'width': '100%',
+                "width": '{}vw'.format(width_val),
+                #'width': '20%',
                 "display": "block",
                 "padding": 15,
                 #'margin': 'auto',
