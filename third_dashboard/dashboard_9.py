@@ -252,58 +252,13 @@ def build_plot(patient, category, identifier, filecache_marker, timestamp, sessi
 
             if category == 'Labor':
                 value_column = 'Laborwert'
-                scatter_data = []
-                for p in patient:
-                    print(p)
-                    for i in identifier:
-                        print(i)
-                        scatter_data.append(go.Scatter(
-                                x=df[(df['FallNr']==int(p))&(df['Wertbezeichner']==i)]['Zeitstempel'], 
-                                y=df[(df['FallNr']==int(p))&(df['Wertbezeichner']==i)][value_column],
-                                name='Patient ' + str(p) + ', ' + str(i)
-
-                            )
-                        )
-                    print(scatter_data)
-            if category == 'Vitalwert':
-                value_column = 'Wert'
-                print(identifier_list)
-                scatter_data = []
-                if 'RR' in identifier_list:
-                    value_column = ['Systolic', 'Mean', 'Diastolic']
-                    for p in patient:
-                        for v in value_column:
-                            scatter_data.append(go.Scatter(
-                                    x=df[(df['FallNr']==int(p))&(df['Wertbezeichner']=='RR')]['Zeitstempel'], 
-                                    y=df[(df['FallNr']==int(p))&(df['Wertbezeichner']=='RR')][v],
-                                    name='Patient ' + str(p) + ', RR'
-
-                                )
-                            )
-                    identifier_list.remove('RR')
-                if len(identifier_list) != 0:  
-                    print(identifier_list)
-                    for p in patient:
-                        for i in identifier_list:
-                            scatter_data.append(go.Scatter(
-                                    x=df[(df['FallNr']==int(p))&(df['Wertbezeichner']==i)]['Zeitstempel'], 
-                                    y=df[(df['FallNr']==int(p))&(df['Wertbezeichner']==i)][value_column],
-                                    name='Patient ' + str(p) + ', ' + str(i)
-
-                                )
-                            )
-            if category == 'Bilanz':
-                scatter_data = []
-                value_column = 'Wert'
-                for p in patient:
-                    for i in identifier_list:
-                        scatter_data.append(go.Scatter(
-                                x=df[(df['FallNr']==int(p))&(df['Wertbezeichner']==i)]['Zeitstempel'], 
-                                y=df[(df['FallNr']==int(p))&(df['Wertbezeichner']==i)][value_column],
-                                name='Patient ' + str(p) + ', ' + str(i)
-                            )
-                        )
-
+                print('in if')
+                patient.sort()
+                df_list = get_df(df, patient, identifier_list)
+                print('end get_df')
+                print(df_list)
+                scatter_data = plot_scatter(df_list, value_column)
+                print('end if')
             fig = go.Figure(data = scatter_data)
             fig.update_layout(transition_duration=500, 
                               margin=dict(l=20, r=5, t=20, b=0), 
@@ -333,6 +288,67 @@ def build_plot(patient, category, identifier, filecache_marker, timestamp, sessi
     else:
         raise dash.exceptions.PreventUpdate
 
+def delta(A, B):
+    delta_days = pd.Timedelta(A.iloc[0]['Zeitstempel'] - B.iloc[0]['Zeitstempel']).days
+    return delta_days
+
+def get_df(dataframe, patient, identifier_list):
+    df_list = []
+    for p in patient:
+        for i in identifier_list:
+            df_temp = dataframe[(dataframe['FallNr']==int(p))&(dataframe['Wertbezeichner']==i)]
+            df_list.append(df_temp)
+    return df_list
+
+def plot_scatter(df_list, value_column):
+
+    first_df = df_list[0]
+    print(len(df_list))
+    print(first_df)
+    first_scatter = get_scatter(first_df, value_column, first=True)
+    df_list.remove(first_df)
+    print('len df_list', len(df_list))
+    if len(df_list) != 0:
+        print('in if plot_scatter')
+        rest_scatter = get_scatter(first_df, value_column, df_list=df_list, first=False)
+        first_scatter.extend(rest_scatter)
+
+    print(first_scatter)
+    return first_scatter
+
+def get_scatter(first_df, value_column, df_list=[], first=False):
+    scatter_data = []
+    if first:
+        p = first_df.iloc[0]['FallNr']
+        scatter_data.append(go.Scatter(
+                    x=first_df['Zeitstempel'], 
+                    y=first_df[value_column],
+                    name='Patient ' + str(p),
+                    customdata=list([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]),
+                    text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
+                    hovertemplate='%{text}<br>%{y}<br>%{customdata}'
+                )
+            )
+    else:
+        for df_temp in df_list:
+            p = df_temp.iloc[0]['FallNr']
+            delta_temp = delta(first_df, df_temp)
+            A = df_temp.copy()
+            A['Zeitstempel'] = A['Zeitstempel'] + pd.offsets.Day(delta_temp)
+            print(df_temp['Zeitstempel'])
+            print(A['Zeitstempel'])
+            print(first_df['Zeitstempel'])
+            scatter_data.append(go.Scatter(
+                    x=A['Zeitstempel'], 
+                    y=df_temp[value_column],
+                    name='Patient ' + str(p),
+                    customdata=list([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]),
+                    text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
+                    hovertemplate='%{text}<br>%{y}<br>%{customdata}'
+                )
+            )
+    return scatter_data
+
 
 @app.callback(
     Output({'type': 'dropdown-ident', 'index': MATCH}, 'options'),
@@ -342,6 +358,7 @@ def build_plot(patient, category, identifier, filecache_marker, timestamp, sessi
      State('upload-data', 'last_modified'),
      State('session-id','children')]
 )
+
 def get_dropdown_ident(patient, category, filecache_marker, timestamp, session_id):
     if filecache_marker is not None and patient is not None and category is not None:
         df = read_dataframe(session_id, timestamp)
@@ -349,9 +366,15 @@ def get_dropdown_ident(patient, category, filecache_marker, timestamp, session_i
             ident_list = []
             for p in patient:
                 ident = list(set(df[(df['Kategorie']==category)&(df['FallNr']==p)].loc[:,'Wertbezeichner']))
-                ident_list.extend(ident)
+                # old version
+                # ident_list.extend(ident)
 
-            ident_list = list(set(ident_list))
+                ident_list.append(ident)
+            # old version: identifier has to be in *at least one* list
+            # ident_list = list(set(ident_list))
+
+            # new version: identifier has to be in *all* lists
+            ident_list = list(set.intersection(*map(set, ident_list)))
             lst_ident = [{'label': i, 'value': i} for i in ident_list]
             return lst_ident
         else:
