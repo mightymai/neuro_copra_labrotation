@@ -249,16 +249,30 @@ def build_plot(patient, category, identifier, filecache_marker, timestamp, sessi
 
         if patient and category and identifier:
             identifier_list = identifier.copy()
-
+            patient.sort()
             if category == 'Labor':
                 value_column = 'Laborwert'
-                print('in if')
-                patient.sort()
                 df_list = get_df(df, patient, identifier_list)
-                print('end get_df')
-                print(df_list)
                 scatter_data = plot_scatter(df_list, value_column)
-                print('end if')
+
+            if category == 'Vitalwert':
+                if 'RR' in identifier_list:
+                    value_column = ['Systolic', 'Mean', 'Diastolic']
+                    df_list = get_df(df, patient, 'RR')
+                    scatter_data = plot_scatter(df_list, value_column)
+                    identifier_list.remove('RR')
+
+                if len(identifier_list) != 0: 
+                    value_column = 'Wert'
+                    df_list = get_df(df, patient, identifier_list)
+                    scatter_data = plot_scatter(df_list, value_column)
+
+            if category == 'Bilanz':
+                value_column = 'Wert'
+                df_list = get_df(df, patient, identifier_list)
+                scatter_data = plot_scatter(df_list, value_column)
+
+
             fig = go.Figure(data = scatter_data)
             fig.update_layout(transition_duration=500, 
                               margin=dict(l=20, r=5, t=20, b=0), 
@@ -294,20 +308,23 @@ def delta(A, B):
 
 def get_df(dataframe, patient, identifier_list):
     df_list = []
-    for p in patient:
-        for i in identifier_list:
-            df_temp = dataframe[(dataframe['FallNr']==int(p))&(dataframe['Wertbezeichner']==i)]
+    if identifier_list == 'RR':
+        for p in patient:
+            df_temp = dataframe[(dataframe['FallNr']==int(p))&(dataframe['Wertbezeichner']=='RR')]
             df_list.append(df_temp)
+    else:
+        for p in patient:
+            for i in identifier_list:
+                df_temp = dataframe[(dataframe['FallNr']==int(p))&(dataframe['Wertbezeichner']==i)]
+                df_list.append(df_temp)
     return df_list
 
 def plot_scatter(df_list, value_column):
 
     first_df = df_list[0]
-    print(len(df_list))
-    print(first_df)
     first_scatter = get_scatter(first_df, value_column, first=True)
     df_list.remove(first_df)
-    print('len df_list', len(df_list))
+
     if len(df_list) != 0:
         print('in if plot_scatter')
         rest_scatter = get_scatter(first_df, value_column, df_list=df_list, first=False)
@@ -320,33 +337,60 @@ def get_scatter(first_df, value_column, df_list=[], first=False):
     scatter_data = []
     if first:
         p = first_df.iloc[0]['FallNr']
-        scatter_data.append(go.Scatter(
-                    x=first_df['Zeitstempel'], 
-                    y=first_df[value_column],
-                    name='Patient ' + str(p),
-                    customdata=list([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]),
-                    text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
-                    hovertemplate='%{text}<br>%{y}<br>%{customdata}'
+        if len(value_column) == 3:
+            for v in value_column:
+                scatter_data.append(go.Scatter(
+                        x=first_df['Zeitstempel'], 
+                        y=first_df[v],
+                        name='Patient ' + str(p),
+                        customdata=list([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]),
+                        text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
+                        hovertemplate='%{text}<br>%{y}<br>%{customdata}'
+                    )
                 )
-            )
-    else:
-        for df_temp in df_list:
-            p = df_temp.iloc[0]['FallNr']
-            delta_temp = delta(first_df, df_temp)
-            A = df_temp.copy()
-            A['Zeitstempel'] = A['Zeitstempel'] + pd.offsets.Day(delta_temp)
-            print(df_temp['Zeitstempel'])
-            print(A['Zeitstempel'])
-            print(first_df['Zeitstempel'])
+
+        else:
             scatter_data.append(go.Scatter(
-                    x=A['Zeitstempel'], 
-                    y=df_temp[value_column],
-                    name='Patient ' + str(p),
-                    customdata=list([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]),
-                    text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
-                    hovertemplate='%{text}<br>%{y}<br>%{customdata}'
+                        x=first_df['Zeitstempel'], 
+                        y=first_df[value_column],
+                        name='Patient ' + str(p),
+                        customdata=list([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]),
+                        text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
+                        hovertemplate='%{text}<br>%{y}<br>%{customdata}'
+                    )
                 )
-            )
+    else:
+        if len(value_column) == 3:
+            for df_temp in df_list:
+                p = df_temp.iloc[0]['FallNr']
+                delta_temp = delta(first_df, df_temp)
+                A = df_temp.copy()
+                A['Zeitstempel'] = A['Zeitstempel'] + pd.offsets.Day(delta_temp)
+                for v in value_column:                
+                    scatter_data.append(go.Scatter(
+                            x=A['Zeitstempel'], 
+                            y=df_temp[v],
+                            name='Patient ' + str(p),
+                            customdata=list([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]),
+                            text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
+                            hovertemplate='%{text}<br>%{y}<br>%{customdata}'
+                        )
+                    )
+        else:
+            for df_temp in df_list:
+                p = df_temp.iloc[0]['FallNr']
+                delta_temp = delta(first_df, df_temp)
+                A = df_temp.copy()
+                A['Zeitstempel'] = A['Zeitstempel'] + pd.offsets.Day(delta_temp)
+                scatter_data.append(go.Scatter(
+                        x=A['Zeitstempel'], 
+                        y=df_temp[value_column],
+                        name='Patient ' + str(p),
+                        customdata=list([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]),
+                        text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
+                        hovertemplate='%{text}<br>%{y}<br>%{customdata}'
+                    )
+                )
     return scatter_data
 
 
