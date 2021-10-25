@@ -73,7 +73,7 @@ layout = html.Div(children=[
         # Allow multiple files to be uploaded
         multiple=False
         )]),
-        dbc.Col([html.Button('Add Chart', id='add-chart', n_clicks=0, className='add-chart button1', style={'display':'block', 'float':'right', 'margin-right':'5px'})])]),
+        dbc.Col([html.Div(id='output-danger', children=[]),html.Button('Add Chart', id='add-chart', n_clicks=0, className='add-chart button1', style={'display':'block', 'float':'right', 'margin-right':'5px'})]),]),
         dbc.Row(className='bigdiv', id='dropdown-menus', children=[])
 ])
     #return layout
@@ -132,7 +132,8 @@ def save_file(contents, filename, last_modified, session_id, timestamp):
 @app.callback(
     [Output('dropdown-menus', 'children'),
      Output('filename_input', 'children'),
-     Output('dropdown-menus', 'style')],
+     Output('dropdown-menus', 'style'),
+     Output('output-danger', 'children')],
     [Input('filecache_marker', 'children'),
      State('upload-data', 'last_modified'),
      State('session-id','children'),
@@ -147,7 +148,7 @@ def update_options(filecache_marker, timestamp, session_id, filename, n_clicks, 
 
     if n_clicks and filename is None:
         message = 'Please upload a file first'
-        return [], html.B(message), style
+        return [], html.B(message), style, []
 
     elif 'index' in input_id:
         print('input_id', input_id)
@@ -173,7 +174,7 @@ def update_options(filecache_marker, timestamp, session_id, filename, n_clicks, 
         else:
             new_style = {'display':'none'}
 
-        return children, 'current file: '+filename, new_style
+        return children, 'current file: '+filename, new_style, []
     elif filecache_marker is not None:
         try:
             df = read_dataframe(session_id, timestamp)
@@ -184,6 +185,8 @@ def update_options(filecache_marker, timestamp, session_id, filename, n_clicks, 
             lst_cat = [{'label': i, 'value': i} for i in categories]
 
             num_children = len(children) + 1 # since we are about to add a child
+            if num_children == 5:
+                return children, 'current file: '+filename, style, dbc.Alert("Maximal 4 charts possible", color="danger",  duration=1500, is_open=True, style={'width':'40%', 'float':'right', 'margin':0})
             width_val = int(1/num_children * 100) - 6
             print(width_val)
             new_style={
@@ -225,11 +228,11 @@ def update_options(filecache_marker, timestamp, session_id, filename, n_clicks, 
             ])])
             children.append(new_child)
             
-            return children, 'current file: '+filename, new_style
+            return children, 'current file: '+filename, new_style, []
         except:
             raise ValueError('no data')
     else:
-        return [], "no file uploaded yet!", {'display': 'none'}
+        return [], "no file uploaded yet!", {'display': 'none'}, []
     
 
 @app.callback(
