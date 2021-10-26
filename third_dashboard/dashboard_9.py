@@ -73,7 +73,7 @@ layout = html.Div(children=[
         # Allow multiple files to be uploaded
         multiple=False
         )]),
-        dbc.Col([html.Div(id='output-danger', children=[]),html.Button('Add Chart', id='add-chart', n_clicks=0, className='add-chart button1', style={'display':'block', 'float':'right', 'margin-right':'5px'})]),]),
+        dbc.Col([html.Button('Add Chart', id='add-chart', n_clicks=0, className='add-chart button1', style={'display':'block', 'float':'right', 'margin-right':'5px'})]),]),
         dbc.Row(className='bigdiv', id='dropdown-menus', children=[])
 ])
     #return layout
@@ -130,10 +130,13 @@ def save_file(contents, filename, last_modified, session_id, timestamp):
 
 
 @app.callback(
-    [Output('dropdown-menus', 'children'),
+    [Output('dropdown-menus', 'style'),
+     Output('dropdown-menus', 'children'),
      Output('filename_input', 'children'),
-     Output('dropdown-menus', 'style'),
-     Output('output-danger', 'children')],
+     Output('add-chart', 'children'),
+     Output('add-chart', 'className'),
+     Output('add-chart','disabled'),
+     Output('add-chart', 'style')],
     [Input('filecache_marker', 'children'),
      State('upload-data', 'last_modified'),
      State('session-id','children'),
@@ -148,7 +151,7 @@ def update_options(filecache_marker, timestamp, session_id, filename, n_clicks, 
 
     if n_clicks and filename is None:
         message = 'Please upload a file first'
-        return [], html.B(message), style, []
+        return style, [], html.B(message), 'Add chart', 'add-chart button1', False,  {'display':'none'}
 
     elif 'index' in input_id:
         print('input_id', input_id)
@@ -160,21 +163,20 @@ def update_options(filecache_marker, timestamp, session_id, filename, n_clicks, 
         ]
         num_children = len(children) 
         if num_children != 0:
-            width_val = int(1/num_children * 100) - 6*num_children
+            width_val = int(1/num_children * 100) - 10
             print(width_val)
             new_style={
                     #"width": '{}%'.format(width_val),
                     'width' : '100%',
                     #"display": "inline-block",
-                    "outline": "thin lightgrey solid",
                     "padding": 15,
                     #'margin-top' : 10
-                    #'margin': 'auto',
+                    'margin-left': 10,
                 }
         else:
             new_style = {'display':'none'}
 
-        return children, 'current file: '+filename, new_style, []
+        return new_style, children, 'current file: '+filename, 'Add chart', 'add-chart button1', False,  {'display':'block', 'float':'right', 'margin-right':'5px'}
     elif filecache_marker is not None:
         try:
             df = read_dataframe(session_id, timestamp)
@@ -185,18 +187,15 @@ def update_options(filecache_marker, timestamp, session_id, filename, n_clicks, 
             lst_cat = [{'label': i, 'value': i} for i in categories]
 
             num_children = len(children) + 1 # since we are about to add a child
-            if num_children == 5:
-                return children, 'current file: '+filename, style, dbc.Alert("Maximal 4 charts possible", color="danger",  duration=1500, is_open=True, style={'width':'40%', 'float':'right', 'margin':0})
-            width_val = int(1/num_children * 100) - 6
-            print(width_val)
+    
+            # width_val = int(1/num_children * 100) - 10
+            # print(width_val)
             new_style={
                 #"width": '{}%'.format(width_val),
                 'width':'100%',
-                #"display": "inline-block",
-                "outline": "thin lightgrey solid",
-                "padding": '2px',
-                #'margin' : 0
-            }
+                "padding": 10,
+                'margin' : 'auto'            
+                }
             new_child = dbc.Col(className="dynamic-div",
             children=[html.Div([html.Button(
                     "X",
@@ -225,19 +224,21 @@ def update_options(filecache_marker, timestamp, session_id, filename, n_clicks, 
                     style={'display':'none'}
                     )
 
-            ])])
+            ])], style={"outline": "thin lightgrey solid", 'padding':10, 'margin-right':5, 'margin-left':5})
             children.append(new_child)
+            if num_children == 4:
+                return style, children, 'current file: '+filename, ['reached max'], 'max-chart', True,  {'display':'block', 'float':'right', 'margin-right':'5px'}
             
-            return children, 'current file: '+filename, new_style, []
+            return new_style, children, 'current file: '+filename, 'Add chart', 'add-chart button1', False,  {'display':'block', 'float':'right', 'margin-right':'5px'}
         except:
             raise ValueError('no data')
     else:
-        return [], "no file uploaded yet!", {'display': 'none'}, []
+        return {'display': 'none'}, [], "no file uploaded yet!", 'Add chart', 'add-chart button1', True,  {'display':'none'}
     
 
 @app.callback(
-    [Output({'type': 'graph', 'index': MATCH}, 'figure'),
-     Output({'type': 'graph', 'index': MATCH}, 'style')],
+    [Output({'type': 'graph', 'index': MATCH}, 'style'),
+     Output({'type': 'graph', 'index': MATCH}, 'figure')],
     [Input({'type': 'dropdown-patients', 'index': MATCH}, 'value'),
      Input({'type': 'dropdown-category', 'index': MATCH}, 'value'),
      Input({'type': 'dropdown-ident', 'index': MATCH}, 'value'),
@@ -277,8 +278,7 @@ def build_plot(patient, category, identifier, filecache_marker, timestamp, sessi
 
 
             fig = go.Figure(data = scatter_data)
-            fig.update_layout(transition_duration=500, 
-                              margin=dict(l=20, r=5, t=20, b=0), 
+            fig.update_layout(margin=dict(l=20, r=5, t=20, b=0), 
                              legend=dict(
                                         yanchor="top",
                                         y=-0.4,
@@ -287,7 +287,7 @@ def build_plot(patient, category, identifier, filecache_marker, timestamp, sessi
                                     ))
 
             num_children = len(children)# since we are about to add a child
-            width_val = int(1/num_children * 100) - 2
+            width_val = int(1/num_children * 100) - 2*num_children
             print(width_val, 'graph')
 
             style={
@@ -298,7 +298,7 @@ def build_plot(patient, category, identifier, filecache_marker, timestamp, sessi
                 #'margin': 'auto',
             }
 
-            return fig, style
+            return style, fig
         else:
             raise dash.exceptions.PreventUpdate
 
