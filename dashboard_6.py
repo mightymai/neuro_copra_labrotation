@@ -459,7 +459,7 @@ def get_scatter(first_df, value_column, df_list=[], first=False):
                 p = df_temp.iloc[0]['FallNr']
                 delta_years, delta_months, delta_days, delta_hours, delta_minutes, delta_seconds = delta(first_df, df_temp)
                 A = df_temp.copy()
-                A['Zeitstempel'] = A['Zeitstempel'] - pd.DateOffset(days=delta_years) - pd.DateOffset(days=delta_months) - pd.DateOffset(days=delta_days) - pd.DateOffset(hours=delta_hours) - pd.DateOffset(minutes=delta_minutes) - pd.DateOffset(seconds=delta_seconds)
+                A['Zeitstempel'] = A['Zeitstempel'] + pd.DateOffset(years=delta_years) + pd.DateOffset(months=delta_months) + pd.DateOffset(days=delta_days) + pd.DateOffset(hours=delta_hours) + pd.DateOffset(minutes=delta_minutes) + pd.DateOffset(seconds=delta_seconds)
                 print(A.iloc[0]['Zeitstempel'])
 
                 color_temp = next(palette)
@@ -481,12 +481,12 @@ def get_scatter(first_df, value_column, df_list=[], first=False):
                 p = df_temp.iloc[0]['FallNr']
                 delta_years, delta_months, delta_days, delta_hours, delta_minutes, delta_seconds = delta(first_df, df_temp)
                 A = df_temp.copy()
-                A['Zeitstempel'] = A['Zeitstempel'] - pd.DateOffset(days=delta_years) - pd.DateOffset(days=delta_months) - pd.DateOffset(days=delta_days) - pd.DateOffset(hours=delta_hours) - pd.DateOffset(minutes=delta_minutes) - pd.DateOffset(seconds=delta_seconds)
+                A['Zeitstempel'] = A['Zeitstempel'] + pd.DateOffset(years=delta_years) + pd.DateOffset(months=delta_months) + pd.DateOffset(days=delta_days) + pd.DateOffset(hours=delta_hours) + pd.DateOffset(minutes=delta_minutes) + pd.DateOffset(seconds=delta_seconds)
                 print(A.iloc[0]['Zeitstempel'])
                 if 'Kategorie_norm' in df_temp: 
                     scatter_data.append(go.Scatter(
                         mode='lines',
-                        x=df_temp['Zeitstempel'], 
+                        x=A['Zeitstempel'], 
                         y=df_temp['Wert_norm'],
                         name='Patient ' + str(p),
                         customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]), df_temp['Kategorie_norm']), axis=-1),
