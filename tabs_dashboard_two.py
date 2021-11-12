@@ -87,7 +87,6 @@ def save_file(contents, filename):
 
 def update_options(file, n_clicks, children, style, delete):
     input_id = dash.callback_context.triggered[0]["prop_id"].split(".")[0]
-    print('here')
     # delete window if 'X' button is clicked
     if 'index' in input_id:
         delete_chart = json.loads(input_id)["index"]
@@ -136,7 +135,7 @@ def update_options(file, n_clicks, children, style, delete):
                         dcc.Dropdown(
                             id={"type": "dropdown-patients", "index": n_clicks},
                             options=lst_pat,
-                            multi=False,             
+                            multi=True,             
                             ),
                         dcc.Dropdown(
                             id={"type": "dropdown-category", "index": n_clicks},
@@ -146,7 +145,7 @@ def update_options(file, n_clicks, children, style, delete):
                         dcc.Dropdown(
                             id={"type": "dropdown-ident", "index": n_clicks},
                             options=[],
-                            multi=True
+                            multi=False
                             ),
                         dcc.Graph(
                             id={"type": "graph", "index": n_clicks},
@@ -170,15 +169,16 @@ def update_options(file, n_clicks, children, style, delete):
     [Input("store", "data"),
      Input({'type': 'dropdown-patients', 'index': MATCH}, 'value'),
      Input({'type': 'dropdown-category', 'index': MATCH}, 'value')])
-def get_dropdown_ident(file, patient, category):
+def get_dropdown_ident(file, patients, category):
     if file is not None or file != []:
-        if patient and category:
+        if patients and category:
             ident_list = []
-            ident = list(set(file[(file['Kategorie']==category)&(file['FallNr']==patient)].loc[:,'Wertbezeichner']))
-            # old version
-            # ident_list.extend(ident)
+            for p in patients:
+                ident = list(set(file[(file['Kategorie']==category)&(file['FallNr']==p)].loc[:,'Wertbezeichner']))
+                # old version
+                # ident_list.extend(ident)
 
-            ident_list.append(ident)
+                ident_list.append(ident)
             # old version: identifier has to be in *at least one* list
             # ident_list = list(set(ident_list))
 
@@ -208,90 +208,45 @@ def build_plot(patient, category, identifier, file, children):
     if file is not None or file != []:
         unit = '_'
         if patient and category and identifier:
-            identifier_list = identifier.copy()
             #patient.sort()
-            print(len(identifier))
-            if len(identifier_list)==1:
-                print('if len(identifier_list) == 1')
-                if category == 'Labor':
-                    value_column = 'Laborwert'
-                    df_list_scatter, _ = get_df(file, patient, identifier_list, value_column)
-                    df_unit = df_list_scatter[0]
-                    print('df_unit', df_unit)
+            if category == 'Labor':
+                value_column = 'Laborwert'
+                df_list_scatter, _ = get_df(file, patient, identifier, value_column)
+                df_unit = df_list_scatter[0]
 
-                    unit = list(df_unit.Unit)[0]
+                unit = list(df_unit.Unit)[0]
+                scatter_data = plot_scatter(df_list_scatter, value_column)
+            if category == 'Vitalwert':
+                if 'RR' == identifier:
+                    value_column = ['Systolic', 'Mean', 'Diastolic']
+                    df_list_scatter, _= get_df(file, patient, 'RR')
                     scatter_data = plot_scatter(df_list_scatter, value_column)
+                else: 
+                    value_column = 'Wert'
+                    df_list_scatter, _ = get_df(file, patient, identifier, value_column)
+                    scatter_data = plot_scatter(df_list_scatter, value_column)
+
+            if category == 'Bilanz':
+                if 'Differenz' == identifier:
+                    value_column = 'Wert'
+                    _, df_list_bar = get_df(file, patient, 'Differenz')
+                    scatter_data = plot_scatter(df_list_bar, value_column, bar=True)
                     
+                else:
+                    value_column = 'Wert'
+                    df_list_scatter, _ = get_df(file, patient, identifier, value_column)
+                    scatter_data = plot_scatter(df_list_scatter, value_column, bilanz=True)
 
-                if category == 'Vitalwert':
-                    if 'RR' in identifier_list:
-                        value_column = ['Systolic', 'Mean', 'Diastolic']
-                        df_list_scatter, _= get_df(file, patient, 'RR')
-                        scatter_data = plot_scatter(df_list_scatter, value_column)
-                        identifier_list.remove('RR')
-
-                    if len(identifier_list) != 0: 
-                        value_column = 'Wert'
-                        df_list_scatter, _ = get_df(file, patient, identifier_list, value_column)
-                        scatter_data = plot_scatter(df_list_scatter, value_column)
-
-                if category == 'Bilanz':
-                    if 'Differenz' in identifier_list:
-                        print('Differenz in identifier_list')
-                        value_column = 'Wert'
-                        _, df_list_bar = get_df(file, patient, 'Differenz')
-                        scatter_data = plot_scatter(df_list_bar, value_column, bar=True)
-                        identifier_list.remove('Differenz')
-                        
-                    if len(identifier_list) != 0:
-                        print('if identifier_list', identifier_list)
-                        value_column = 'Wert'
-                        df_list_scatter, _ = get_df(file, patient, identifier_list, value_column)
-                        scatter_data = plot_scatter(df_list_scatter, value_column, bilanz=True)
-
-            elif len(identifier_list)>1:
-                print('if len(identifier_list) > 1')
-                scatter_data = []
-                unit = ''
-                if category == 'Labor':
-                    value_column = 'Laborwert'
-                    df_list_scatter, _ = get_df(file, patient, identifier_list, value_column)
-
-                    scatter_data.extend(plot_scatter(df_list_scatter, value_column))
-                    
-
-                if category == 'Vitalwert':
-                    if 'RR' in identifier_list:
-                        value_column = ['Systolic', 'Mean', 'Diastolic']
-                        df_list_scatter, _= get_df(file, patient, 'RR')
-                        scatter_data.extend(plot_scatter(df_list_scatter, value_column))
-                        identifier_list.remove('RR')
-
-                    if len(identifier_list) != 0: 
-                        value_column = 'Wert'
-                        df_list_scatter, _ = get_df(file, patient, identifier_list, value_column)
-                        scatter_data.extend(plot_scatter(df_list_scatter, value_column))
-
-                if category == 'Bilanz':
-                    if 'Differenz' in identifier_list:
-                        value_column = 'Wert'
-                        _, df_list_bar = get_df(file, patient, 'Differenz')
-                        scatter_data.extend(plot_scatter(df_list_bar, value_column, bar=True))
-                        identifier_list.remove('Differenz')
-
-                    if len(identifier_list) != 0:
-                        print('if identifier_list 2', identifier_list)
-                        value_column = 'Wert'
-                        df_list_scatter, _ = get_df(file, patient, identifier_list, value_column)
-                        scatter_data.extend(plot_scatter(df_list_scatter, value_column, bilanz=True))
-            
+        
             fig = go.Figure(data = scatter_data)
             if len(scatter_data) == 1 and unit != '_':
+                print('if', len(scatter_data), unit)
                 fig.update_layout(margin=dict(l=5, r=5, t=5, b=5), 
                     showlegend=True,
                     xaxis_title="date of measurement",
                     yaxis_title=unit)
             elif len(scatter_data) == 1 and unit == '_':
+                print('elif', len(scatter_data), unit)
                 fig.update_layout(margin=dict(l=5, r=5, t=5, b=5), 
                     showlegend=True,
                     xaxis_title="date of measurement",
@@ -301,7 +256,7 @@ def build_plot(patient, category, identifier, file, children):
                     showlegend=True,
                     xaxis_title="date of measurement",
                     yaxis_title='tba')
-            else:
+            elif len(scatter_data) > 1 and unit != '_':
                 max_val = 0
                 max_scat = None
                 for scat in scatter_data:
@@ -329,25 +284,58 @@ def build_plot(patient, category, identifier, file, children):
                     ticktext=tick_labels,
                     tickvals=list_dates,
                 )
-
                 fig.update_layout(margin=dict(l=5, r=5, t=5, b=5), 
                     showlegend=True,
-                    xaxis_title="day of hospitalization",
-                    yaxis_title='z-normalization')
+                    xaxis_title="date of measurement",
+                    yaxis_title=unit)
+            else:
+                print('else', len(scatter_data), unit)
+                max_val = 0
+                max_scat = None
+                for scat in scatter_data:
+                    length = len(scat.x)
+                    print(length, 'length')
+                    if length > max_val:
+                        max_scat = scat
+                        max_val = length
+                        print(max_val, 'max_val')
+
+
+                x_scatter = pd.DataFrame(max_scat.x)
+                x_scatter.rename( columns={0 :'dates'}, inplace=True )
+                x_scatter= x_scatter.groupby(x_scatter['dates'].dt.date)
+
+                x_temp1 = list(x_scatter['dates'].apply(lambda n: n.iloc[0]))
+                x_temp2 = list(x_scatter['dates'].apply(lambda n: n.iloc[-1]))
+
+                list_dates = get_date_list(x_temp1, x_temp2)
+
+                tick_labels = []
+                [tick_labels.append(str(i+1)) for i in range(len(list_dates))]
+
+                fig.update_xaxes(
+                    ticktext=tick_labels,
+                    tickvals=list_dates,
+                )
+                fig.update_layout(margin=dict(l=5, r=5, t=5, b=5), 
+                    showlegend=True,
+                    xaxis_title="days since admission",
+                    yaxis_title='tba')
 
             style={
                 'width': '100%',
                 "display": "block",
                 "padding": 15
             }
-
-
-            fig.update_layout(
+            fig.update_xaxes(
+                ticklabelmode="period")
+            fig.update_layout(barmode='stack',
                 legend=dict(
                     orientation="h",
                     yanchor="bottom",
                     y=-0.25)
                 )
+
             
             return style, fig
         else:
@@ -424,28 +412,28 @@ def dataframe_znorm_differenz(dataframe):
 # calculates time difference
 def delta(A, B):
     diff = relativedelta(A.iloc[0]['Zeitstempel'], B.iloc[0]['Zeitstempel'])
+    
     return diff.years, diff.months, diff.days, diff.hours, diff.minutes, diff.seconds
 
 
-# computes subsets of given dataframe based on selected patient and identifier_list
-def get_df(dataframe, patient, identifier_list, value_column=[]):
-    print(len(identifier_list), 'len identifier_list')
+# computes subsets of given dataframe based on selected patient and identifier
+def get_df(dataframe, patients, identifier, value_column=[]):
     df_list_scatter = []
     df_list_bar = []
-    print('identifier_list in get_df', identifier_list)
-    if identifier_list == 'RR':
-        df_temp = dataframe[(dataframe['FallNr']==int(patient))&(dataframe['Wertbezeichner']=='RR')]
-        df_list_scatter.append(df_temp)
+    if identifier == 'RR':
+        for p in patients:
+            df_temp = dataframe[(dataframe['FallNr']==int(p))&(dataframe['Wertbezeichner']=='RR')]
+            df_list_scatter.append(df_temp)
 
-    elif identifier_list == ['Differenz'] or 'Differenz' in identifier_list or identifier_list == 'Differenz':
-        identifier_list = 'Differenz'
-        
-        df_temp = dataframe[(dataframe['FallNr']==int(patient))&(dataframe['Kategorie']=='Bilanz')]
-        df_list_bar.append(df_temp)
+    elif identifier == ['Differenz'] or identifier == 'Differenz':
+        identifier = 'Differenz'
+        for p in patients:
+            df_temp = dataframe[(dataframe['FallNr']==int(p))&(dataframe['Kategorie']=='Bilanz')]
+            df_list_bar.append(df_temp)
 
     else:
-        for i in identifier_list:
-            df_temp = dataframe[(dataframe['FallNr']==int(patient))&(dataframe['Wertbezeichner']==i)]
+        for p in patients:
+            df_temp = dataframe[(dataframe['FallNr']==int(p))&(dataframe['Wertbezeichner']==identifier)]
             df_list_scatter.append(df_temp)
     return df_list_scatter, df_list_bar
 
@@ -453,7 +441,6 @@ def get_df(dataframe, patient, identifier_list, value_column=[]):
 # from a list consiting of dataframe (subsets of the main dataframe) this function computes go.Scatter elements via get_scatter and appends them to a list
 def plot_scatter(df_list, value_column, bar=False, bilanz=False):
     first_scatter = []
-    print(len(df_list))
     if len(df_list) == 1:
         first_df = df_list[0]
         first_scatter = get_scatter(first_df, value_column, first=True, bar=bar)
@@ -462,9 +449,8 @@ def plot_scatter(df_list, value_column, bar=False, bilanz=False):
     elif len(df_list) > 0:
         first_df = df_list[0]
         first_scatter = get_scatter(first_df, value_column, df_list=df_list, first=True, bar=bar, bilanz=bilanz)
-        print('remove first_df')
         df_list.remove(first_df)
-        print(df_list)
+
         rest_scatter = get_scatter(first_df, value_column, df_list=df_list, first=False, bar=bar, bilanz=bilanz)
         first_scatter.extend(rest_scatter)
 
@@ -475,13 +461,8 @@ def plot_scatter(df_list, value_column, bar=False, bilanz=False):
 def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bilanz=False):
 
     if first and df_list == []:
-        print('first if')
-        print(first)
-        print(df_list)
         scatter_data = []
         patient = first_df.iloc[0]['FallNr']
-        wertname = first_df.iloc[0]['Wertbezeichner']
-
         # identifier is RR
         if len(value_column) == 3: 
             color_temp = next(palette2)
@@ -494,7 +475,7 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                         name=v,
                         customdata=list([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]),
                         text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
-                        hovertemplate='%{text}<br>%{y}<br>%{customdata}'
+                        hovertemplate='%{text}<br>%{y}<br>%{customdata}',
                     )
                 )
         # add units
@@ -505,7 +486,7 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                 mode='markers+lines',
                 x=first_df['Zeitstempel'], 
                 y=first_df[value_column],
-                name=wertname,
+                name='Patient ' + str(patient),
                 customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column], first_df['Unit']), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{customdata[1]}%{customdata[2]}<br>%{customdata[0]}'
@@ -518,7 +499,7 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                 base='relative',
                 x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
                 y=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz'],
-                name=wertname,
+                name='Patient ' + str(patient),
                 customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
                 hovertext = ['Differenz']*len(first_df),
                 hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}'
@@ -529,7 +510,7 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                 mode='lines',
                 x=first_df['Zeitstempel'], 
                 y=first_df[value_column].astype(int),
-                name=wertname,
+                name='Patient ' + str(patient),
                 customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column]), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{y}<br>%{customdata[0]}'
@@ -540,7 +521,7 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                 mode='lines',
                 x=first_df['Zeitstempel'], 
                 y=first_df[value_column],
-                name=wertname,
+                name='Patient ' + str(patient),
                 customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column]), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{customdata[1]}<br>%{customdata[0]}'
@@ -549,10 +530,9 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
         return scatter_data
     scatter_data = []
     if first and df_list != []:
-        print('second if')
+
         scatter_data = []
         patient = first_df.iloc[0]['FallNr']
-        wertname = first_df.iloc[0]['Wertbezeichner']
 
         # identifier is RR
         if len(value_column) == 3: 
@@ -563,7 +543,7 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                         mode='lines',
                         x=first_df['Zeitstempel'], 
                         y=first_df[v],
-                        name=wertname,
+                        name='Patient ' + str(patient),
                         customdata=list([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]),
                         text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                         hovertemplate='%{text}<br>%{y}<br>%{customdata}'
@@ -573,8 +553,8 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
             scatter_data.append(go.Scatter(
                 mode='markers+lines',
                 x=first_df['Zeitstempel'], 
-                y=first_df[value_column+'_norm'],
-                name=wertname,
+                y=first_df[value_column], # no z-norm here!
+                name='Patient ' + str(patient),
                 customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column], first_df['Unit']), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{customdata[1]} %{customdata[2]}<br>%{customdata[0]}'
@@ -585,7 +565,7 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                 base='relative',
                 x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen nur Hälfte der Zahlen
                 y=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz'],
-                name=wertname,
+                name='Patient ' + str(patient),
                 customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
                 hovertext = ['Differenz']*len(first_df),
                 hovertemplate='%{hovertext}<br>%{y}<br>%{customdata[0]}'
@@ -596,7 +576,7 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                 mode='lines',
                 x=first_df['Zeitstempel'], 
                 y=first_df[value_column].astype(int),
-                name=wertname,
+                name='Patient ' + str(patient),
                 customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column]), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{y}<br>%{customdata[0]}'
@@ -607,8 +587,8 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
             scatter_data.append(go.Scatter(
                 mode='lines',
                 x=first_df['Zeitstempel'], 
-                y=first_df[value_column+'_norm'],
-                name=wertname,
+                y=first_df[value_column], # no z-norm here!
+                name='Patient ' + str(patient),
                 customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column]), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{customdata[1]}<br>%{customdata[0]}'
@@ -629,7 +609,7 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                         marker_color = color_temp,
                         x=A['Zeitstempel'], 
                         y=df_temp[v],
-                        name=wertname,
+                        name='Patient ' + str(p),
                         customdata=list([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]),
                         text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
                         hovertemplate='%{text}<br>%{y}<br>%{customdata}'
@@ -639,7 +619,6 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
         else:
             for df_temp in df_list:
                 patient = df_temp.iloc[0]['FallNr']
-                wertname = df_temp.iloc[0]['Wertbezeichner']
                 delta_years, delta_months, delta_days, delta_hours, delta_minutes, delta_seconds = delta(first_df, df_temp)
                 A = df_temp.copy()
                 A['Zeitstempel'] = A['Zeitstempel'] + pd.DateOffset(years=delta_years) + pd.DateOffset(months=delta_months) + pd.DateOffset(days=delta_days) + pd.DateOffset(hours=delta_hours) + pd.DateOffset(minutes=delta_minutes) + pd.DateOffset(seconds=delta_seconds)
@@ -648,8 +627,8 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                     scatter_data.append(go.Scatter(
                         mode='markers+lines',
                         x=A['Zeitstempel'], 
-                        y=df_temp[value_column+'_norm'],
-                        name=wertname,
+                        y=df_temp[value_column], # no z-norm here!
+                        name='Patient ' + str(patient),
                         customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]), df_temp[value_column], df_temp['Unit']), axis=-1),
                         text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
                         hovertemplate='%{text}<br>%{customdata[1]} %{customdata[2]}<br>%{customdata[0]}'
@@ -658,9 +637,9 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                 elif bar:
                     scatter_data.append(go.Bar(
                         base='relative',
-                        x=df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
+                        x=A[(A.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
                         y=df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Differenz'],
-                        name=wertname,
+                        name='Patient ' + str(patient),
                         customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
                         hovertext = ['Differenz']*len(df_temp),
                         hovertemplate='%{hovertext}<br>%{y}<br>%{customdata[0]}'
@@ -669,9 +648,9 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                 elif bilanz:
                     scatter_data.append(go.Scatter(
                         mode='lines',
-                        x=df_temp['Zeitstempel'], 
+                        x=A['Zeitstempel'], 
                         y=df_temp[value_column].astype(int),
-                        name=wertname,
+                        name='Patient ' + str(patient),
                         customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]), df_temp[value_column]), axis=-1),
                         text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
                         hovertemplate='%{text}<br>%{y}<br>%{customdata[0]}'
@@ -681,8 +660,8 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                     scatter_data.append(go.Scatter(
                         mode='lines',
                         x=A['Zeitstempel'], 
-                        y=df_temp[value_column+'_norm'],
-                        name=wertname,
+                        y=df_temp[value_column], # no z-norm here!
+                        name='Patient ' + str(patient),
                         customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]), df_temp[value_column]), axis=-1),
                         text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
                         hovertemplate='%{text}<br>%{customdata[1]}<br>%{customdata[0]}'
