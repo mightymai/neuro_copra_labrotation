@@ -26,15 +26,17 @@ from dash_extensions.enrich import Dash, Output, Input, State, ServersideOutput
 
 app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP], prevent_initial_callbacks=True)
 app.layout = html.Div(children=[
-    dbc.Row([dbc.Col(children=[html.Div(id='filename_input', style={'margin': '10px', 'lineHeight': '40px', 'size':5}, children=['no file uploaded yet!'])]),
-    dbc.Col([dcc.Upload(
+    dbc.Row([dbc.Col(children=[html.Div(id='filename_input', style={'lineHeight': '40px'}, children=['no file uploaded yet!'])], width=3), #'size':5, 'margin': '10px', 
+    dbc.Col(
+        id='middle',
+        children=[dcc.Upload(
             id='upload-data',
             children=html.Div([
                 'Drag and Drop or ',
                 html.A('Select File')
             ]),
             style={
-                'width': '90%',
+                'width': '80%',
                 'height': '55px',
                 'lineHeight': '50px',
                 'borderWidth': '1.5px',
@@ -43,28 +45,33 @@ app.layout = html.Div(children=[
                 'textAlign': 'center',
                 'verticalAlign' : 'baseline',
                 'margin': '5px',
-                'margin-bottom':'20px'
+                'margin-bottom':'20px',
+                'justify-content': 'center',
+                'display':'flex',
+                'float':'middle'
             },
             # Allow multiple files to be uploaded
             multiple=False
-            )]),
-    dbc.Col([html.Button('Add Chart', id='add-chart', n_clicks=0, className='add-chart button1', style={'display':'none', 'float':'right', 'margin-right':'5px'})])
-    ]),
-    dbc.Row(dcc.Loading(dcc.Store(id='store'), type="dot", color='#088F8F'), style={'margin-left':'-35px'}),
+            )], width=4
+    ),
+    dbc.Col([html.Button('Add Chart', id='add-chart', n_clicks=0, className='add-chart button1', style={'display':'none'})], width=3)]), 
+    dbc.Row(dcc.Loading(dcc.Store(id='store'), type="dot", color='#651fff'), style={'margin-left':'-35px'}),
     dbc.Row(dcc.Tabs(id="tabs-example-graph", value='tab-1-example-graph', children=[
         dcc.Tab(label='Intrapatient Comparison', value='tab-1-example-graph', children=[]),
         dcc.Tab(label='Interpatient Comparison', value='tab-2-example-graph', children=[]),
-    ], colors={ 'border': '#d6d6d6', 'primary': '#088F8F', 'background': '#f9f9f9',}), style={'margin-top':'15px'}),
+    ], colors={ 'border': '#d6d6d6', 'primary': '#651fff', 'background': '#ebe9f0',}), style={'margin-top':'15px', 'padding':-5}),
     dbc.Row(className='bigdiv', id='dropdown-menus', children=[]),
     dbc.Row(className='bigdiv', id='dropdown-menus-2', children=[])
 ])
 
 @app.callback(
     [ServersideOutput("store", "data"),
-     Output('filename_input', 'children')],
+     Output('filename_input', 'children'),
+     Output('middle', 'children')],
     [Input('upload-data', 'contents'),
-     Input('upload-data', 'filename')])
-def save_file(contents, filename):
+     Input('upload-data', 'filename'),
+     Input('filename_input', 'children')])
+def save_file(contents, filename, children):
     if contents is not None:
         if '.csv' in filename:
             time.sleep(1)
@@ -74,9 +81,9 @@ def save_file(contents, filename):
 
             print('finished saving file')
 
-            return df, 'current file: '+filename
+            return df, 'current file: '+filename, html.A(children=[html.Button('Load new data', className='add-chart button1')],href='/', style={'display':'flex','margin-right':'5px', 'padding':3, "text-decoration": "none"}),
         else:
-            return [], html.B('The uploaded file has to be a .csv file!')
+            return [], html.B('The uploaded file has to be a .csv file!'), children
 
 @app.callback(
     [Output('dropdown-menus', 'style'),
@@ -112,14 +119,13 @@ def update_options(file, n_clicks, children, style, children_2, style_2, delete,
             if num_children != 0:
                 new_style={
                         'width' : '100%',
-                        "padding": 15,
                         #'margin-left': 10,
                         'margin' : 'auto'
                     }
             else:
                 new_style = {'display':'none'}
             print('deleted child')
-            return new_style, children, {'display': 'none'}, [], 'Add chart', 'add-chart button1', False,  {'display':'block', 'float':'right', 'margin-right':'5px'}
+            return style, children, {'display': 'none'}, [], 'Add chart', 'add-chart button1', False,  {'display':'block', 'float':'right'}
 
         elif file is not None or file != []:
             try:
@@ -145,21 +151,27 @@ def update_options(file, n_clicks, children, style, children_2, style_2, delete,
                                 n_clicks=0,
                                 style={"display": "block"}
                                 ),
-                            dcc.Dropdown(
-                                id={"type": "dropdown-patients", "index": n_clicks},
-                                options=lst_pat,
-                                multi=False,             
-                                ),
-                            dcc.Dropdown(
-                                id={"type": "dropdown-category", "index": n_clicks},
-                                options=lst_cat,
-                                multi=False
-                                ),
-                            dcc.Dropdown(
-                                id={"type": "dropdown-ident", "index": n_clicks},
-                                options=[],
-                                multi=True
-                                ),
+                            html.Div(children=[
+                                dcc.Dropdown(
+                                    id={"type": "dropdown-patients", "index": n_clicks},
+                                    options=lst_pat,
+                                    multi=False,
+                                    style={"margin-bottom": 5},
+                                    ),
+                                dcc.Dropdown(
+                                    id={"type": "dropdown-category", "index": n_clicks},
+                                    options=lst_cat,
+                                    multi=False,
+                                    style={"margin-bottom": 5},
+                                    ),
+                                dcc.Dropdown(
+                                    id={"type": "dropdown-ident", "index": n_clicks},
+                                    options=[],
+                                    multi=True
+                                    )
+                                ],
+                                className='dropdownstyle'
+                            ),
                             dcc.Graph(
                                 id={"type": "graph", "index": n_clicks},
                                 style={'display':'none'}
@@ -169,7 +181,7 @@ def update_options(file, n_clicks, children, style, children_2, style_2, delete,
 
                 children.append(new_child)
                 print('added dropdown menus 1')
-                return new_style, children, {'display': 'none'}, [], 'Add chart', 'add-chart button1', False,  {'display':'block', 'float':'right', 'margin-right':'5px'}
+                return new_style, children, {'display': 'none'}, [], 'Add chart', 'add-chart button1', False,  {'display':'block', 'float':'right'}
             except:
                 raise dash.exceptions.PreventUpdate
         else:
@@ -189,13 +201,13 @@ def update_options(file, n_clicks, children, style, children_2, style_2, delete,
             if num_children != 0:
                 new_style={
                         'width' : '100%',
-                        "padding": 15,
+                        #"padding": 15,
                         'margin' : 'auto'
                     }
             else:
                 new_style = {'display':'none'}
             print('deleted child')
-            return {'display': 'none'}, [], new_style, children_2, 'Add chart', 'add-chart button1', False,  {'display':'block', 'float':'right', 'margin-right':'5px'}
+            return {'display': 'none'}, [], new_style, children_2, 'Add chart', 'add-chart button1', False,  {'display':'block', 'float':'right'}
 
         elif file is not None or file != []:
             try:
@@ -221,21 +233,26 @@ def update_options(file, n_clicks, children, style, children_2, style_2, delete,
                                 n_clicks=0,
                                 style={"display": "block"}
                                 ),
-                            dcc.Dropdown(
-                                id={"type": "dropdown-patients-2", "index": n_clicks},
-                                options=lst_pat,
-                                multi=True,             
-                                ),
-                            dcc.Dropdown(
-                                id={"type": "dropdown-category-2", "index": n_clicks},
-                                options=lst_cat,
-                                multi=False
-                                ),
-                            dcc.Dropdown(
-                                id={"type": "dropdown-ident-2", "index": n_clicks},
-                                options=[],
-                                multi=False
-                                ),
+                            html.Div(children=[
+                                dcc.Dropdown(
+                                    id={"type": "dropdown-patients-2", "index": n_clicks},
+                                    options=lst_pat,
+                                    multi=True,   
+                                    style={"margin-bottom": 5}          
+                                    ),
+                                dcc.Dropdown(
+                                    id={"type": "dropdown-category-2", "index": n_clicks},
+                                    options=lst_cat,
+                                    multi=False,
+                                    style={"margin-bottom": 5}
+                                    ),
+                                dcc.Dropdown(
+                                    id={"type": "dropdown-ident-2", "index": n_clicks},
+                                    options=[],
+                                    multi=False
+                                    )],
+                                className='dropdownstyle'
+                            ),
                             dcc.Graph(
                                 id={"type": "graph-2", "index": n_clicks},
                                 style={'display':'none'}
@@ -245,7 +262,7 @@ def update_options(file, n_clicks, children, style, children_2, style_2, delete,
 
                 children_2.append(new_child)
                 print('added dropdown menus 2')
-                return {'display': 'none'}, [], new_style, children_2, 'Add chart', 'add-chart button1', False,  {'display':'block', 'float':'right', 'margin-right':'5px'}
+                return {'display': 'none'}, [], new_style, children_2, 'Add chart', 'add-chart button1', False,  {'display':'block', 'float':'right'}
             except:
                 raise dash.exceptions.PreventUpdate
         else:
@@ -339,7 +356,10 @@ def build_plot(patient, category, identifier, file, children, tab):
                 if category == 'Labor':
                     value_column = 'Laborwert'
                     df_list_scatter, _ = get_df_2(file, patient, identifier, value_column)
-                    df_unit = df_list_scatter[0]
+                    if not len(df_list_scatter) == 0:
+                        df_unit = df_list_scatter[0]
+                    else:
+                        raise dash.exceptions.PreventUpdate
                     if not df_unit.empty:
                         unit = list(df_unit.Unit)[0]
                     scatter_data = plot_scatter_2(df_list_scatter, value_column)
@@ -380,17 +400,18 @@ def build_plot(patient, category, identifier, file, children, tab):
                     fig.update_layout(margin=dict(l=5, r=5, t=5, b=5), 
                         showlegend=True,
                         xaxis_title="date of measurement",
-                        yaxis_title='tba')
+                        yaxis_title='mmHg')
                 elif len(scatter_data)==0:
                     raise dash.exceptions.PreventUpdate
                 elif len(scatter_data) > 1 and unit != '_':
                     max_val = 0
                     max_scat = None
                     for scat in scatter_data:
-                        length = len(scat.x)
-                        if length > max_val:
+                        temp = list(scat.x)
+                        diff_temp = temp[0]-temp[-1]
+                        if np.abs(diff_temp.days) > max_val:
                             max_scat = scat
-                            max_val = length
+                            max_val = np.abs(diff_temp.days)
 
 
                     x_scatter = pd.DataFrame(max_scat.x)
@@ -400,16 +421,17 @@ def build_plot(patient, category, identifier, file, children, tab):
                     x_temp1 = list(x_scatter['dates'].apply(lambda n: n.iloc[0]))
                     x_temp2 = list(x_scatter['dates'].apply(lambda n: n.iloc[-1]))
 
-                    list_dates = get_date_list(x_temp1, x_temp2)
-
-                    tick_labels = []
-                    day_diff = delta_day(x_temp1[0], x_temp1[-1])
-                    #[tick_labels.append(str(i+1)) for i in range(len(list_dates))]
-                    [tick_labels.append(str(i+1)) for i in range(day_diff)]
+                    day_diff = x_temp1[0] -  x_temp1[-1]
+                    tick_labels=[]
+                    [tick_labels.append(str(i+1)) for i in range(np.abs(day_diff.days))]
+                    base = [list(x_temp1)[0] + datetime.timedelta(days=n) for n in range(np.abs(day_diff.days))]
+                    base = [i.replace(hour=12, minute=0, second=0) for i in base]
+                    print(tick_labels, 'tick_labels')
+                    print('day_diff.days', day_diff.days, 'x_temp1[0]', x_temp1[0], 'x_temp1[-1]', x_temp1[-1])
 
                     fig.update_xaxes(
                         ticktext=tick_labels,
-                        tickvals=list_dates,
+                        tickvals=base,
                     )
                     fig.update_layout(
                         margin=dict(l=5, r=5, t=5, b=5), 
@@ -417,13 +439,15 @@ def build_plot(patient, category, identifier, file, children, tab):
                         xaxis_title="date of measurement",
                         yaxis_title=unit)
                 else:
+                    print('else build_plot')
                     max_val = 0
                     max_scat = None
                     for scat in scatter_data:
-                        length = len(scat.x)
-                        if length > max_val:
+                        temp = list(scat.x)
+                        diff_temp = temp[0]-temp[-1]
+                        if np.abs(diff_temp.days) > max_val:
                             max_scat = scat
-                            max_val = length
+                            max_val = np.abs(diff_temp.days)
 
 
                     x_scatter = pd.DataFrame(max_scat.x)
@@ -432,13 +456,15 @@ def build_plot(patient, category, identifier, file, children, tab):
 
                     x_temp1 = list(x_scatter['dates'].apply(lambda n: n.iloc[0]))
                     x_temp2 = list(x_scatter['dates'].apply(lambda n: n.iloc[-1]))
-
-        
-                    day_diff = x_temp1[0].day -  x_temp1[-1].day
+                    
+                    day_diff = x_temp1[0] -  x_temp1[-1] 
+                    print('day_diff.days', day_diff.days, 'x_temp1[0]', x_temp1[0], 'x_temp1[-1]', x_temp1[-1])
                     tick_labels=[]
-                    [tick_labels.append(str(i+1)) for i in range(np.abs(day_diff))]
-                    base = [list(x_temp1)[0] + datetime.timedelta(days=n) for n in range(day_diff)]
+                    [tick_labels.append(str(i+1)) for i in range(np.abs(day_diff.days)+1)]
+                    base = [list(x_temp1)[0] + datetime.timedelta(days=n) for n in range(np.abs(day_diff.days)+1)]
                     base = [i.replace(hour=12, minute=0, second=0) for i in base]
+                    print(tick_labels, 'tick_labels')
+                    
 
 
                     fig.update_xaxes(
@@ -457,11 +483,13 @@ def build_plot(patient, category, identifier, file, children, tab):
                 }
                 fig.update_xaxes(
                     ticklabelmode="period")
-                fig.update_layout(barmode='relative',
+                fig.update_layout(
+                    barmode='relative',
                     legend=dict(
                         orientation="h",
                         yanchor="bottom",
-                        y=-0.25)
+                        y=-0.25),
+                    plot_bgcolor='#eaeaf2'
                     )
 
                 
@@ -494,9 +522,13 @@ def build_plot(patient, category, identifier, file, children, tab):
                         value_column = 'Laborwert'
                         df_list_scatter, _ = get_df(file, patient, identifier_list, value_column)
                         
-                        df_unit = df_list_scatter[0]
-
-                        unit = list(df_unit.Unit)[0]
+                        if not len(df_list_scatter) == 0:
+                            df_unit = df_list_scatter[0]
+                        else:
+                            raise dash.exceptions.PreventUpdate
+                        if not df_unit.empty:
+                            unit = list(df_unit.Unit)[0]
+                        
                         scatter_data = plot_scatter(df_list_scatter, value_column)
                         
 
@@ -575,17 +607,23 @@ def build_plot(patient, category, identifier, file, children, tab):
                     fig.update_layout(margin=dict(l=5, r=5, t=5, b=5), 
                         showlegend=True,
                         xaxis_title="date of measurement",
-                        yaxis_title='tba')
+                        yaxis_title='mmHg')
                 elif len(scatter_data)==0:
                     raise dash.exceptions.PreventUpdate
+                elif category == 'Bilanz':
+                    fig.update_layout(margin=dict(l=5, r=5, t=5, b=5), 
+                        showlegend=True,
+                        xaxis_title="date of measurement",
+                        yaxis_title='ml')
                 else:
                     max_val = 0
                     max_scat = None
                     for scat in scatter_data:
-                        length = len(scat.x)
-                        if length > max_val:
+                        temp = list(scat.x)
+                        diff_temp = temp[0]-temp[-1]
+                        if np.abs(diff_temp.days) > max_val:
                             max_scat = scat
-                            max_val = length
+                            max_val = np.abs(diff_temp.days)
 
 
                     x_scatter = pd.DataFrame(max_scat.x)
@@ -595,10 +633,10 @@ def build_plot(patient, category, identifier, file, children, tab):
                     x_temp1 = list(x_scatter['dates'].apply(lambda n: n.iloc[0]))
                     x_temp2 = list(x_scatter['dates'].apply(lambda n: n.iloc[-1]))
 
-                    day_diff = x_temp1[0].day -  x_temp1[-1].day
+                    day_diff = x_temp1[0] -  x_temp1[-1]
                     tick_labels=[]
-                    [tick_labels.append(str(i+1)) for i in range(np.abs(day_diff))]
-                    base = [list(x_temp1)[0] + datetime.timedelta(days=n) for n in range(day_diff)]
+                    [tick_labels.append(str(i+1)) for i in range(np.abs(day_diff.days))]
+                    base = [list(x_temp1)[0] + datetime.timedelta(days=n) for n in range(np.abs(day_diff.days))]
                     base = [i.replace(hour=12, minute=0, second=0) for i in base]
 
                     fig.update_xaxes(
@@ -618,11 +656,13 @@ def build_plot(patient, category, identifier, file, children, tab):
                 }
 
 
-                fig.update_layout(barmode='relative',
+                fig.update_layout(
+                    barmode='relative',
                     legend=dict(
                         orientation="h",
                         yanchor="bottom",
-                        y=-0.25)
+                        y=-0.25),
+                    plot_bgcolor='#eaeaf2'
                     )
                 
                 return style, fig
@@ -648,8 +688,10 @@ from itertools import cycle
 from scipy.stats import zscore
 from dateutil.relativedelta import relativedelta
 
-palette = cycle(px.colors.qualitative.Alphabet)
-palette2 = cycle(px.colors.qualitative.Set3)
+palette = cycle(px.colors.qualitative.Set1)
+palette2 = cycle(px.colors.qualitative.D3)
+#palette3 = cycle(px.colors.qualitative.Dark2)
+
 
 # get 'mean time' of two lists of dates 
 def get_date_list(x1,x2):
@@ -768,8 +810,9 @@ def plot_scatter_2(df_list, value_column, bar=False, bilanz=False):
 
 # computes go.Scatter elements from dataframes
 def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bilanz=False):
-
+    print('get_scatter_2')
     if first and df_list == []:
+        palette3 = cycle(px.colors.qualitative.D3)
         scatter_data = []
         patient = first_df.iloc[0]['FallNr']
         # identifier is RR
@@ -779,10 +822,10 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
                 scatter_data.append(go.Scatter(
                         marker_color = color_temp,
                         mode='lines',
-                        x=first_df['Zeitstempel'], 
+                        x=first_df['Zeitstempel'].sort_values(), 
                         y=first_df[v],
                         name=v,
-                        customdata=list([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]),
+                        customdata=list([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]),
                         text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                         hovertemplate='%{text}<br>%{y}<br>%{customdata}',
                     )
@@ -792,53 +835,59 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
             scatter_data.append(go.Scatter(
                 #marker_color = color_temp,
                 mode='markers+lines',
-                x=first_df['Zeitstempel'], 
+                x=first_df['Zeitstempel'].sort_values(),
                 y=first_df[value_column],
                 name='Patient ' + str(patient),
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column], first_df['Unit']), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column], first_df['Unit']), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{customdata[1]}%{customdata[2]}<br>%{customdata[0]}'
                 )
             )
         # identifier = 'Differenz'
         elif bar:
+            color_1 = next(palette3)
+            print('first bar', color_1)
             scatter_data.append(go.Bar(
-                    base='relative',
-                    x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
-                    y=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Wert'],
-                    name='Einfuhr',
-                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
-                    hovertext = ['Differenz']*len(first_df),
-                    hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}'
-                    )
+                marker_color = color_1,
+                base='relative',
+                x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values(),
+                y=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Wert'].astype(int),
+                name='Einfuhr/Ausfuhr',
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values()]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Wert'].astype(int)), axis=-1),
+                hovertext = ['Einfuhr']*len(first_df),
+                hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}<extra></extra>'
                 )
+            )
 
             scatter_data.append(go.Bar(
-                    x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
-                    y=-first_df[(first_df.Wertbezeichner=='Ausfuhr')]['Wert'],
-                    name='Ausfuhr',
-                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
-                    hovertext = ['Differenz']*len(first_df),
-                    hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}'
-                    )
+                marker_color = color_1,
+                x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values(),
+                y=-first_df[(first_df.Wertbezeichner=='Ausfuhr')]['Wert'].astype(int),
+                #name='Ausfuhr',
+                showlegend=False,
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Ausfuhr')]['Zeitstempel'].sort_values()]), first_df[(first_df.Wertbezeichner=='Ausfuhr')]['Wert'].astype(int)), axis=-1),
+                hovertext = ['Ausfuhr']*len(first_df),
+                hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}<extra></extra>'
                 )
+            )
             scatter_data.append(
-                go.Scatter(
-                    x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
-                    y=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz'],
+                go.Scatter(#marker_color = color_2,
+                    line=dict(width=2.5),
+                    x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values(), # brauchen noch Hälfte der Zahlen
+                    y=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz'].astype(int),
                     name='Differenz',
-                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
+                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values()]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz'].astype(int)), axis=-1),
                     hovertext = ['Differenz']*len(first_df),
-                    hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}'
+                    hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}<extra></extra>'
                     )
                 )
         elif bilanz:
             scatter_data.append(go.Scatter(
                 mode='lines',
-                x=first_df['Zeitstempel'], 
+                x=first_df['Zeitstempel'].sort_values(),
                 y=first_df[value_column].astype(int),
                 name='Patient ' + str(patient),
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column]), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column]), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{y}<br>%{customdata[0]}'
                 )
@@ -846,16 +895,17 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
         else:
             scatter_data.append(go.Scatter(
                 mode='lines',
-                x=first_df['Zeitstempel'], 
+                x=first_df['Zeitstempel'].sort_values(),
                 y=first_df[value_column],
                 name='Patient ' + str(patient),
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column]), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column]), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{customdata[1]}<br>%{customdata[0]}'
                 )
             )
         return scatter_data
     scatter_data = []
+    palette3 = cycle(px.colors.qualitative.D3)
     if first and df_list != []:
 
         scatter_data = []
@@ -868,10 +918,10 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
                 scatter_data.append(go.Scatter(
                         marker_color = color_temp,
                         mode='lines',
-                        x=first_df['Zeitstempel'], 
+                        x=first_df['Zeitstempel'].sort_values(), 
                         y=first_df[v],
                         name='Patient ' + str(patient),
-                        customdata=list([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]),
+                        customdata=list([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]),
                         text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                         hovertemplate='%{text}<br>%{y}<br>%{customdata}'
                     )
@@ -879,51 +929,60 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
         elif first_df.iloc[0]['Kategorie'] == 'Labor':
             scatter_data.append(go.Scatter(
                 mode='markers+lines',
-                x=first_df['Zeitstempel'], 
+                x=first_df['Zeitstempel'].sort_values(), 
                 y=first_df[value_column], # no z-norm here!
                 name='Patient ' + str(patient),
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column], first_df['Unit']), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column], first_df['Unit']), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{customdata[1]} %{customdata[2]}<br>%{customdata[0]}'
                 )
             )
         elif bar:
-            scatter_data.append(go.Bar(
-                    x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
-                    y=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Wert'],
-                    name='Einfuhr Patient ' + str(patient),
-                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
-                    hovertext = ['Differenz']*len(first_df),
-                    hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}'
+            color_1 = next(palette3)
+            print('second bar', color_1)
+            scatter_data.append(
+                go.Bar(
+                    marker_color= color_1,
+                    x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values(), # brauchen noch Hälfte der Zahlen
+                    y=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Wert'].astype(int),
+                    name='Einfuhr/Ausfuhr Patient ' + str(patient),
+                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values()]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Wert'].astype(int)), axis=-1),
+                    hovertext = ['Einfuhr']*len(first_df),
+                    hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}<extra></extra>'
                     )
                 )
 
-            scatter_data.append(go.Bar(
-                    x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
-                    y=-first_df[(first_df.Wertbezeichner=='Ausfuhr')]['Wert'],
-                    name='Ausfuhr Patient ' + str(patient),
-                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
-                    hovertext = ['Differenz']*len(first_df),
-                    hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}'
+            scatter_data.append(
+                go.Bar(
+                    marker_color=color_1,
+                    x=first_df[(first_df.Wertbezeichner=='Ausfuhr')]['Zeitstempel'].sort_values(), # brauchen noch Hälfte der Zahlen
+                    y=-first_df[(first_df.Wertbezeichner=='Ausfuhr')]['Wert'].astype(int),
+                    #name='Ausfuhr Patient ' + str(patient),
+                    showlegend=False,
+                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Ausfuhr')]['Zeitstempel'].sort_values()]), first_df[(first_df.Wertbezeichner=='Ausfuhr')]['Wert'].astype(int)), axis=-1),
+                    hovertext = ['Ausfuhr']*len(first_df),
+                    hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}<extra></extra>'
                     )
                 )
             scatter_data.append(
                 go.Scatter(
-                    x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
-                    y=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz'],
+                    line=dict(width=2.5),
+                    #marker_color=color_2,
+                    x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values(),  # brauchen noch Hälfte der Zahlen
+                    y=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz'].astype(int),
                     name='Differenz Patient ' + str(patient),
-                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
+                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values()]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz'].astype(int)), axis=-1),
                     hovertext = ['Differenz']*len(first_df),
-                    hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}'
+                    hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}<extra></extra>'
                     )
                 )
         elif bilanz:
             scatter_data.append(go.Scatter(
                 mode='lines',
-                x=first_df['Zeitstempel'], 
+                x=first_df['Zeitstempel'].sort_values(), 
                 y=first_df[value_column].astype(int),
                 name='Patient ' + str(patient),
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column]), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column]), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{y}<br>%{customdata[0]}'
                 )
@@ -932,15 +991,16 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
         else:
             scatter_data.append(go.Scatter(
                 mode='lines',
-                x=first_df['Zeitstempel'], 
+                x=first_df['Zeitstempel'].sort_values(), 
                 y=first_df[value_column], # no z-norm here!
                 name='Patient ' + str(patient),
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column]), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column]), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{customdata[1]}<br>%{customdata[0]}'
                 )
             )
     else:
+        palette3 = cycle(px.colors.qualitative.D3)
         # identifier is RR
         if len(value_column) == 3:
             for df_temp in df_list:
@@ -953,16 +1013,17 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
                     scatter_data.append(go.Scatter(
                         mode='lines',
                         marker_color = color_temp,
-                        x=A['Zeitstempel'], 
+                        x=A['Zeitstempel'].sort_values(), 
                         y=df_temp[v],
                         name='Patient ' + str(p),
-                        customdata=list([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]),
+                        customdata=list([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel'].sort_values()]),
                         text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
                         hovertemplate='%{text}<br>%{y}<br>%{customdata}'
                     )
                 )
             
         else:
+            color_1 = next(palette3)
             for df_temp in df_list:
                 patient = df_temp.iloc[0]['FallNr']
                 delta_years, delta_months, delta_days, delta_hours, delta_minutes, delta_seconds = delta(first_df, df_temp)
@@ -972,51 +1033,60 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
                 if df_temp.iloc[0]['Kategorie'] == 'Labor':
                     scatter_data.append(go.Scatter(
                         mode='markers+lines',
-                        x=A['Zeitstempel'], 
+                        x=A['Zeitstempel'].sort_values(), 
                         y=df_temp[value_column], # no z-norm here!
                         name='Patient ' + str(patient),
-                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]), df_temp[value_column], df_temp['Unit']), axis=-1),
+                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel'].sort_values()]), df_temp[value_column], df_temp['Unit']), axis=-1),
                         text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
                         hovertemplate='%{text}<br>%{customdata[1]} %{customdata[2]}<br>%{customdata[0]}'
                         )
                     )
                 elif bar:
-                    scatter_data.append(go.Bar(
-                            x=A[(A.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
+                    color_1 = next(palette3)
+                    print('third bar', color_1)
+                    scatter_data.append(
+                        go.Bar(
+                            marker_color=color_1,
+                            x=A[(A.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values(), # brauchen noch Hälfte der Zahlen
                             y=df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Wert'],
-                            name='Einfuhr Patient ' + str(patient),
-                            customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
-                            hovertext = ['Differenz']*len(first_df),
-                            hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}'
+                            name='Einfuhr/Ausfuhr Patient ' + str(patient),
+                            customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values()]), df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Wert'].astype(int)), axis=-1),
+                            hovertext = ['Einfuhr']*len(df_temp),
+                            hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}<extra></extra>'
                             )
                         )
 
-                    scatter_data.append(go.Bar(
-                            x=A[(A.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
+                    scatter_data.append(
+                        go.Bar(
+                            marker_color=color_1,
+                            x=A[(A.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values(), # brauchen noch Hälfte der Zahlen
                             y=-df_temp[(df_temp.Wertbezeichner=='Ausfuhr')]['Wert'],
-                            name='Ausfuhr Patient ' + str(patient),
-                            customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
-                            hovertext = ['Differenz']*len(first_df),
-                            hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}'
+                            #name='Ausfuhr Patient ' + str(patient),
+                            showlegend=False,
+                            customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp[(df_temp.Wertbezeichner=='Ausfuhr')]['Zeitstempel'].sort_values()]), df_temp[(df_temp.Wertbezeichner=='Ausfuhr')]['Wert'].astype(int)), axis=-1),
+                            hovertext = ['Ausfuhr']*len(df_temp),
+                            hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}<extra></extra>'
                             )
                         )
                     scatter_data.append(
                         go.Scatter(
-                            x=A[(A.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
+                            #marker_color=color_2,
+                            line=dict(width=2.5),
+                            x=A[(A.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values(), # brauchen noch Hälfte der Zahlen
                             y=df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Differenz'],
                             name='Differenz Patient ' + str(patient),
-                            customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
-                            hovertext = ['Differenz']*len(first_df),
-                            hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}'
+                            customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values()]), df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Differenz'].astype(int)), axis=-1),
+                            hovertext = ['Differenz']*len(df_temp),
+                            hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}<extra></extra>'
                             )
                         )
                 elif bilanz:
                     scatter_data.append(go.Scatter(
                         mode='lines',
-                        x=A['Zeitstempel'], 
+                        x=A['Zeitstempel'].sort_values(), 
                         y=df_temp[value_column].astype(int),
                         name='Patient ' + str(patient),
-                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]), df_temp[value_column]), axis=-1),
+                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel'].sort_values()]), df_temp[value_column]), axis=-1),
                         text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
                         hovertemplate='%{text}<br>%{y}<br>%{customdata[0]}'
                         )
@@ -1024,10 +1094,10 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
                 else:
                     scatter_data.append(go.Scatter(
                         mode='lines',
-                        x=A['Zeitstempel'], 
+                        x=A['Zeitstempel'].sort_values(), 
                         y=df_temp[value_column], # no z-norm here!
                         name='Patient ' + str(patient),
-                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]), df_temp[value_column]), axis=-1),
+                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel'].sort_values()]), df_temp[value_column]), axis=-1),
                         text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
                         hovertemplate='%{text}<br>%{customdata[1]}<br>%{customdata[0]}'
                         )
@@ -1067,10 +1137,10 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                 scatter_data.append(go.Scatter(
                         marker_color = color_temp,
                         mode='lines',
-                        x=first_df['Zeitstempel'], 
+                        x=first_df['Zeitstempel'].sort_values(), 
                         y=first_df[v],
                         name=v,
-                        customdata=list([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]),
+                        customdata=list([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]),
                         text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                         hovertemplate='%{text}<br>%{y}<br>%{customdata}'
                     )
@@ -1080,23 +1150,26 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
             scatter_data.append(go.Scatter(
                 #marker_color = color_temp,
                 mode='markers+lines',
-                x=first_df['Zeitstempel'], 
+                x=first_df['Zeitstempel'].sort_values(), 
                 y=first_df[value_column],
                 name=wertname,
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column], first_df['Unit']), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column], first_df['Unit']), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{customdata[1]}%{customdata[2]}<br>%{customdata[0]}'
                 )
             )
         # identifier = 'Differenz'
         elif bar:
+            palette3 = cycle(px.colors.qualitative.D3)
+            color_1 = next(palette3)
             scatter_data.append(
                 go.Bar(
+                    marker_color=color_1,
                     base='relative',
-                    x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
+                    x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values(),  # brauchen noch Hälfte der Zahlen
                     y=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Wert'],
-                    name='Einfuhr',
-                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
+                    name='Einfuhr/Ausfuhr',
+                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values()]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
                     hovertext = ['Differenz']*len(first_df),
                     hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}'
                     )
@@ -1104,21 +1177,25 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
 
             scatter_data.append(
                 go.Bar(
+                    marker_color=color_1,
                     base='relative',
-                    x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
+                    x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values(),  # brauchen noch Hälfte der Zahlen
                     y=-first_df[(first_df.Wertbezeichner=='Ausfuhr')]['Wert'],
-                    name='Ausfuhr',
-                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
+                    #name='Ausfuhr',
+                    showlegend=False,
+                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values()]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
                     hovertext = ['Differenz']*len(first_df),
                     hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}'
                     )
                 )
             scatter_data.append(
                 go.Scatter(
-                    x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
+                    #marker_color=color_1,
+                    line=dict(width=2.5),
+                    x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values(),  # brauchen noch Hälfte der Zahlen
                     y=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz'],
                     name='Differenz',
-                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
+                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values()]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
                     hovertext = ['Differenz']*len(first_df),
                     hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}'
                     )
@@ -1126,10 +1203,10 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
         elif bilanz:
             scatter_data.append(go.Scatter(
                 mode='lines',
-                x=first_df['Zeitstempel'], 
+                x=first_df['Zeitstempel'].sort_values(),  
                 y=first_df[value_column].astype(int),
                 name=wertname,
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column]), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column]), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{y}<br>%{customdata[0]}'
                 )
@@ -1137,10 +1214,10 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
         else:
             scatter_data.append(go.Scatter(
                 mode='lines',
-                x=first_df['Zeitstempel'], 
+                x=first_df['Zeitstempel'].sort_values(), 
                 y=first_df[value_column],
                 name=wertname,
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column]), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column]), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{customdata[1]}<br>%{customdata[0]}'
                 )
@@ -1159,10 +1236,10 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                 scatter_data.append(go.Scatter(
                         marker_color = color_temp,
                         mode='lines',
-                        x=first_df['Zeitstempel'], 
+                        x=first_df['Zeitstempel'].sort_values(), 
                         y=first_df[v],
                         name=wertname,
-                        customdata=list([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]),
+                        customdata=list([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]),
                         text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                         hovertemplate='%{text}<br>%{y}<br>%{customdata}'
                     )
@@ -1170,10 +1247,10 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
         elif first_df.iloc[0]['Kategorie'] == 'Labor':
             scatter_data.append(go.Scatter(
                 mode='markers+lines',
-                x=first_df['Zeitstempel'], 
+                x=first_df['Zeitstempel'].sort_values(), 
                 y=first_df[value_column+'_norm'],
                 name=wertname,
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column], first_df['Unit']), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column], first_df['Unit']), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{customdata[1]} %{customdata[2]}<br>%{customdata[0]}'
                 )
@@ -1181,10 +1258,10 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
         elif bar:
             scatter_data.append(go.Bar(
                 base='relative',
-                x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen nur Hälfte der Zahlen
+                x=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values(),  # brauchen nur Hälfte der Zahlen
                 y=first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz'],
                 name=wertname,
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df[(first_df.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values()]), first_df[(first_df.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
                 hovertext = ['Differenz']*len(first_df),
                 hovertemplate='%{hovertext}<br>%{y}<br>%{customdata[0]}'
                 )
@@ -1192,10 +1269,10 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
         elif bilanz:
             scatter_data.append(go.Scatter(
                 mode='lines',
-                x=first_df['Zeitstempel'], 
+                x=first_df['Zeitstempel'].sort_values(),  
                 y=first_df[value_column].astype(int),
                 name=wertname,
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column]), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column]), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{y}<br>%{customdata[0]}'
                 )
@@ -1204,10 +1281,10 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
         else:
             scatter_data.append(go.Scatter(
                 mode='lines',
-                x=first_df['Zeitstempel'], 
+                x=first_df['Zeitstempel'].sort_values(), 
                 y=first_df[value_column+'_norm'],
                 name=wertname,
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel']]), first_df[value_column]), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column]), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{customdata[1]}<br>%{customdata[0]}'
                 )
@@ -1225,10 +1302,10 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                     scatter_data.append(go.Scatter(
                         mode='lines',
                         marker_color = color_temp,
-                        x=A['Zeitstempel'], 
+                        x=A['Zeitstempel'].sort_values(), 
                         y=df_temp[v],
                         name=wertname,
-                        customdata=list([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]),
+                        customdata=list([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel'].sort_values()]),
                         text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
                         hovertemplate='%{text}<br>%{y}<br>%{customdata}'
                     )
@@ -1245,10 +1322,10 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                 if df_temp.iloc[0]['Kategorie'] == 'Labor':
                     scatter_data.append(go.Scatter(
                         mode='markers+lines',
-                        x=A['Zeitstempel'], 
+                        x=A['Zeitstempel'].sort_values(), 
                         y=df_temp[value_column+'_norm'],
                         name=wertname,
-                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]), df_temp[value_column], df_temp['Unit']), axis=-1),
+                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel'].sort_values()]), df_temp[value_column], df_temp['Unit']), axis=-1),
                         text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
                         hovertemplate='%{text}<br>%{customdata[1]} %{customdata[2]}<br>%{customdata[0]}'
                         )
@@ -1256,10 +1333,10 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                 elif bar:
                     scatter_data.append(go.Bar(
                         base='relative',
-                        x=df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Zeitstempel'], # brauchen noch Hälfte der Zahlen
+                        x=df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values(),  # brauchen noch Hälfte der Zahlen
                         y=df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Differenz'],
                         name=wertname,
-                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Zeitstempel']]), df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
+                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Zeitstempel'].sort_values()]), df_temp[(df_temp.Wertbezeichner=='Einfuhr')]['Differenz']), axis=-1),
                         hovertext = ['Differenz']*len(df_temp),
                         hovertemplate='%{hovertext}<br>%{y}<br>%{customdata[0]}'
                         )
@@ -1267,10 +1344,10 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                 elif bilanz:
                     scatter_data.append(go.Scatter(
                         mode='lines',
-                        x=df_temp['Zeitstempel'], 
+                        x=df_temp['Zeitstempel'].sort_values(), 
                         y=df_temp[value_column].astype(int),
                         name=wertname,
-                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]), df_temp[value_column]), axis=-1),
+                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel'].sort_values()]), df_temp[value_column]), axis=-1),
                         text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
                         hovertemplate='%{text}<br>%{y}<br>%{customdata[0]}'
                         )
@@ -1278,10 +1355,10 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                 else:
                     scatter_data.append(go.Scatter(
                         mode='lines',
-                        x=A['Zeitstempel'], 
+                        x=A['Zeitstempel'].sort_values(), 
                         y=df_temp[value_column+'_norm'],
                         name=wertname,
-                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel']]), df_temp[value_column]), axis=-1),
+                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel'].sort_values()]), df_temp[value_column]), axis=-1),
                         text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
                         hovertemplate='%{text}<br>%{customdata[1]}<br>%{customdata[0]}'
                         )
