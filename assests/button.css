@@ -1,5 +1,5 @@
 .add-chart {
-  background-color: #088F8F;
+  background-color: #651fff;
   border: none;
   color: white;
   padding: 12px 24px;
@@ -19,7 +19,7 @@
   height: 30px;
   text-align: center;  
   border-radius:100%;
-  background-color: #088F8F;
+  background-color: #651fff;
   border: none;
   color: white;
   text-decoration: none;
@@ -32,11 +32,10 @@
 .button1 {
   background-color: white; 
   color: black; 
-  border: 2px solid #088F8F;
+  border: 2px solid #651fff;
 }
 
 .button1:hover {
-  background-color: #088F8F;
+  background-color: #651fff;
   color: white;
 }
-
