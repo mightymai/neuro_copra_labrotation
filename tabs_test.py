@@ -279,7 +279,7 @@ def get_dropdown_ident(file, patient, category, tab):
         if file is not None or file != []:
             if patient and category:
                 ident_list = []
-                ident = list(set(file[(file['Kategorie']==category)&(file['FallNr']==patient)].loc[:,'Wertbezeichner']))
+                ident = list(set(file[(file['Kategorie']==category)&(file['FallNr']==patient)]['Wertbezeichner']))
                 # old version
                 # ident_list.extend(ident)
 
@@ -404,7 +404,7 @@ def build_plot(patient, category, identifier, file, children, tab):
                 elif len(scatter_data)==0:
                     raise dash.exceptions.PreventUpdate
                 elif len(scatter_data) > 1 and unit != '_':
-                    max_val = 0
+                    max_val = -1
                     max_scat = None
                     for scat in scatter_data:
                         temp = list(scat.x)
@@ -440,7 +440,7 @@ def build_plot(patient, category, identifier, file, children, tab):
                         yaxis_title=unit)
                 else:
                     print('else build_plot')
-                    max_val = 0
+                    max_val = -1
                     max_scat = None
                     for scat in scatter_data:
                         temp = list(scat.x)
@@ -545,6 +545,7 @@ def build_plot(patient, category, identifier, file, children, tab):
                             scatter_data = plot_scatter(df_list_scatter, value_column)
 
                     if category == 'Bilanz':
+                        print('category==Bilanz')
                         if 'Differenz' in identifier_list:
                             
                             value_column = 'Wert'
@@ -553,7 +554,7 @@ def build_plot(patient, category, identifier, file, children, tab):
                             identifier_list.remove('Differenz')
                             
                         if len(identifier_list) != 0:
-                            
+                            print('second if in build_plot')
                             value_column = 'Wert'
                             df_list_scatter, _ = get_df(file, patient, identifier_list, value_column)
                             scatter_data = plot_scatter(df_list_scatter, value_column, bilanz=True)
@@ -616,7 +617,7 @@ def build_plot(patient, category, identifier, file, children, tab):
                         xaxis_title="date of measurement",
                         yaxis_title='ml')
                 else:
-                    max_val = 0
+                    max_val = -1
                     max_scat = None
                     for scat in scatter_data:
                         temp = list(scat.x)
@@ -799,10 +800,10 @@ def plot_scatter_2(df_list, value_column, bar=False, bilanz=False):
 
     elif len(df_list) > 0:
         first_df = df_list[0]
-        first_scatter = get_scatter_2(first_df, value_column, df_list=df_list, first=True, bar=bar, bilanz=bilanz)
+        first_scatter = get_scatter_2(first_df, value_column, df_list=df_list, first=True, bar=bar) #, bilanz=bilanz)
         df_list.remove(first_df)
 
-        rest_scatter = get_scatter_2(first_df, value_column, df_list=df_list, first=False, bar=bar, bilanz=bilanz)
+        rest_scatter = get_scatter_2(first_df, value_column, df_list=df_list, first=False, bar=bar) #, bilanz=bilanz)
         first_scatter.extend(rest_scatter)
 
     return first_scatter
@@ -885,9 +886,9 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
             scatter_data.append(go.Scatter(
                 mode='lines',
                 x=first_df['Zeitstempel'].sort_values(),
-                y=first_df[value_column].astype(int),
+                y=first_df[value_column],
                 name='Patient ' + str(patient),
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column]), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column].astype(int)), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{y}<br>%{customdata[0]}'
                 )
@@ -977,12 +978,14 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
                     )
                 )
         elif bilanz:
+            #print('value_column', value_column)
+            #print('first_df[value_column]', first_df[value_column].notna())
             scatter_data.append(go.Scatter(
                 mode='lines',
                 x=first_df['Zeitstempel'].sort_values(), 
-                y=first_df[value_column].astype(int),
+                y=first_df[value_column],
                 name='Patient ' + str(patient),
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column]), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column]), axis=-1), # .astype(int)
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{y}<br>%{customdata[0]}'
                 )
@@ -1084,9 +1087,9 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
                     scatter_data.append(go.Scatter(
                         mode='lines',
                         x=A['Zeitstempel'].sort_values(), 
-                        y=df_temp[value_column].astype(int),
+                        y=df_temp[value_column],
                         name='Patient ' + str(patient),
-                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel'].sort_values()]), df_temp[value_column]), axis=-1),
+                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel'].sort_values()]), df_temp[value_column].astype(int)), axis=-1),
                         text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
                         hovertemplate='%{text}<br>%{y}<br>%{customdata[0]}'
                         )
@@ -1109,14 +1112,14 @@ def plot_scatter(df_list, value_column, bar=False, bilanz=False):
     first_scatter = []
     if len(df_list) == 1:
         first_df = df_list[0]
-        first_scatter = get_scatter(first_df, value_column, first=True, bar=bar)
+        first_scatter = get_scatter(first_df, value_column, first=True, bar=bar) #  bilanz=bilanz
         df_list.remove(first_df)
 
     elif len(df_list) > 0:
         first_df = df_list[0]
-        first_scatter = get_scatter(first_df, value_column, df_list=df_list, first=True, bar=bar, bilanz=bilanz)
+        first_scatter = get_scatter(first_df, value_column, df_list=df_list, first=True, bar=bar) #, bilanz=bilanz)
         df_list.remove(first_df)
-        rest_scatter = get_scatter(first_df, value_column, df_list=df_list, first=False, bar=bar, bilanz=bilanz)
+        rest_scatter = get_scatter(first_df, value_column, df_list=df_list, first=False, bar=bar)#, bilanz=bilanz)
         first_scatter.extend(rest_scatter)
 
     return first_scatter
@@ -1201,17 +1204,21 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                     )
                 )
         elif bilanz:
+            print('first')
+            print('value_column', value_column)
+            print(first_df[value_column])
             scatter_data.append(go.Scatter(
                 mode='lines',
                 x=first_df['Zeitstempel'].sort_values(),  
-                y=first_df[value_column].astype(int),
+                y=first_df[value_column],
                 name=wertname,
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column]), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column].astype(int)), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{y}<br>%{customdata[0]}'
                 )
             )
         else:
+            print('first else')
             scatter_data.append(go.Scatter(
                 mode='lines',
                 x=first_df['Zeitstempel'].sort_values(), 
@@ -1267,18 +1274,22 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                 )
             )
         elif bilanz:
+            print('second')
+            print('value_column', value_column)
+            print(first_df[value_column])
             scatter_data.append(go.Scatter(
                 mode='lines',
                 x=first_df['Zeitstempel'].sort_values(),  
-                y=first_df[value_column].astype(int),
+                y=first_df[value_column],
                 name=wertname,
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column]), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in first_df['Zeitstempel'].sort_values()]), first_df[value_column].astype(int)), axis=-1),
                 text = [first_df.iloc[0]['Wertbezeichner']]*len(first_df),
                 hovertemplate='%{text}<br>%{y}<br>%{customdata[0]}'
                 )
             )
             
         else:
+            print('second else')
             scatter_data.append(go.Scatter(
                 mode='lines',
                 x=first_df['Zeitstempel'].sort_values(), 
@@ -1342,17 +1353,21 @@ def get_scatter(first_df, value_column, df_list=[], first=False, bar=False, bila
                         )
                     )
                 elif bilanz:
+                    print('third')
+                    print('value_column', value_column)
+                    print(first_df[value_column])
                     scatter_data.append(go.Scatter(
                         mode='lines',
                         x=df_temp['Zeitstempel'].sort_values(), 
-                        y=df_temp[value_column].astype(int),
+                        y=df_temp[value_column],
                         name=wertname,
-                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel'].sort_values()]), df_temp[value_column]), axis=-1),
+                        customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in df_temp['Zeitstempel'].sort_values()]), df_temp[value_column]).astype(int), axis=-1),
                         text = [df_temp.iloc[0]['Wertbezeichner']]*len(df_temp),
                         hovertemplate='%{text}<br>%{y}<br>%{customdata[0]}'
                         )
                     )
                 else:
+                    print('third else')
                     scatter_data.append(go.Scatter(
                         mode='lines',
                         x=A['Zeitstempel'].sort_values(), 
