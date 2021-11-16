@@ -691,6 +691,8 @@ palette = cycle(px.colors.qualitative.Set1)
 palette2 = cycle(px.colors.qualitative.D3)
 #palette3 = cycle(px.colors.qualitative.Dark2)
 
+palette4 = cycle(['#000000', '#a4211c', '#ffff00','#8855dd'])
+
 
 # get 'mean time' of two lists of dates 
 def get_date_list(x1,x2):
@@ -812,6 +814,7 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
     print('get_scatter_2')
     if first and df_list == []:
         palette3 = cycle(px.colors.qualitative.D3)
+        palette4 = cycle(['#000000', '#a4211c', '#ffff00','#8855dd'])
         scatter_data = []
         patient = first_df.iloc[0]['FallNr']
         # identifier is RR
@@ -854,14 +857,17 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
             y_aus = list(df_temp_aus.groupby([df_temp_aus['Zeitstempel'].dt.date]).sum()['Wert'].astype(int))
 
             y_diff = list(df_temp_ein.groupby([df_temp_ein['Zeitstempel'].dt.date]).sum()['Differenz'].astype(int))
-            color_1 = next(palette3)
+            dat =  df_temp_ein.groupby(df_temp_ein['Zeitstempel'].dt.date)
+            x_oj = pd.Series(dat['Zeitstempel'].apply(lambda n: n.iloc[0]))
 
+            color_1 = next(palette3)
+            color_2 = next(palette4)
             scatter_data.append(go.Bar(
                 marker_color = color_1,
                 x=x.sort_values(),
                 y=y_ein,
                 name='Einfuhr/Ausfuhr',
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in x.sort_values()]), y_ein), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in x_oj.sort_values()]), y_ein), axis=-1),
                 hovertext = ['Einfuhr']*len(first_df),
                 hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}<extra></extra>'
                 )
@@ -873,18 +879,19 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
                 y=-np.array(y_aus),
                 #name='Ausfuhr',
                 showlegend=False,
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in x.sort_values()]), y_aus), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in x_oj.sort_values()]), y_aus), axis=-1),
                 hovertext = ['Ausfuhr']*len(first_df),
                 hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}<extra></extra>'
                 )
             )
             scatter_data.append(
-                go.Scatter(#marker_color = color_2,
+                go.Scatter(
+                    marker_color = color_2,
                     line=dict(width=2.5),
                     x=x, # brauchen noch Hälfte der Zahlen
                     y=y_diff,
                     name='Differenz',
-                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in x.sort_values()]), y_diff), axis=-1),
+                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in x_oj.sort_values()]), y_diff), axis=-1),
                     hovertext = ['Differenz']*len(first_df),
                     hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}<extra></extra>'
                     )
@@ -914,6 +921,7 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
         return scatter_data
     scatter_data = []
     palette3 = cycle(px.colors.qualitative.D3)
+    palette4 = cycle(['#000000', '#a4211c', '#ffff00','#8855dd'])
     if first and df_list != []:
 
         scatter_data = []
@@ -946,7 +954,6 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
                 )
             )
         elif bar:
-            color_1 = next(palette3)
             df_temp_ein = first_df[(first_df.Wertbezeichner=='Einfuhr')]
 
             x = df_temp_ein.groupby([df_temp_ein['Zeitstempel'].dt.date]).sum().reset_index()['Zeitstempel']
@@ -959,13 +966,17 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
             y_aus = df_temp_aus.groupby([df_temp_aus['Zeitstempel'].dt.date]).sum()['Wert'].astype(int)
 
             y_diff = df_temp_ein.groupby([df_temp_ein['Zeitstempel'].dt.date]).sum()['Differenz'].astype(int)
-            print('second bar', color_1)
+            dat =  df_temp_ein.groupby(df_temp_ein['Zeitstempel'].dt.date)
+            x_oj = pd.Series(dat['Zeitstempel'].apply(lambda n: n.iloc[0]))
+
+            color_1 = next(palette3)
+            color_2 = next(palette4)
             scatter_data.append(go.Bar(
                 marker_color = color_1,
                 x=x.sort_values(),
                 y=y_ein,
                 name='Einfuhr/Ausfuhr Patient '+str(patient),
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in x.sort_values()]), y_ein), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in x_oj.sort_values()]), y_ein), axis=-1),
                 hovertext = ['Einfuhr']*len(first_df),
                 hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}<extra></extra>'
                 )
@@ -977,18 +988,19 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
                 y=-y_aus,
                 #name='Ausfuhr',
                 showlegend=False,
-                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in x.sort_values()]), y_aus), axis=-1),
+                customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in x_oj.sort_values()]), y_aus), axis=-1),
                 hovertext = ['Ausfuhr']*len(first_df),
                 hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}<extra></extra>'
                 )
             )
             scatter_data.append(
-                go.Scatter(#marker_color = color_2,
+                go.Scatter(
+                    marker_color = color_2,
                     line=dict(width=2.5),
                     x=x.sort_values(), # brauchen noch Hälfte der Zahlen
                     y=y_diff,
                     name='Differenz Patient '+str(patient),
-                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in x.sort_values()]), y_diff), axis=-1),
+                    customdata=np.stack((np.array([d.strftime('%B %d %Y, %H:%M') for d in x_oj.sort_values()]), y_diff), axis=-1),
                     hovertext = ['Differenz']*len(first_df),
                     hovertemplate='%{hovertext}<br>%{customdata[1]}<br>%{customdata[0]}<extra></extra>'
                     )
@@ -1021,6 +1033,7 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
             )
     else:
         palette3 = cycle(px.colors.qualitative.D3)
+        palette4 = cycle(['#000000', '#a4211c', '#ffff00','#8855dd'])
         # identifier is RR
         if len(value_column) == 3:
             for df_temp in df_list:
@@ -1044,6 +1057,7 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
             
         else:
             color_1 = next(palette3)
+            color_2 = next(palette4)
             for df_temp in df_list:
                 patient = df_temp.iloc[0]['FallNr']
                 delta_years, delta_months, delta_days, delta_hours, delta_minutes, delta_seconds = delta(first_df, df_temp)
@@ -1063,6 +1077,7 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
                     )
                 elif bar:
                     color_1 = next(palette3)
+                    color_2 = next(palette4)
 
                     ####################
                     #first_df = df[(df.FallNr==35054219)&(df.Kategorie=='Bilanz')]
@@ -1155,7 +1170,7 @@ def get_scatter_2(first_df, value_column, df_list=[], first=False, bar=False, bi
                         )
                     scatter_data.append(
                         go.Scatter(
-                            #marker_color=color_2,
+                            marker_color=color_2,
                             line=dict(width=2.5),
                             x=pd.Series(x_temp).sort_values(), # brauchen noch Hälfte der Zahlen
                             y=y_diff,
